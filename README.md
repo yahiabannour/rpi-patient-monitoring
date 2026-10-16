@@ -1,3 +1,5 @@
+**Deutsch** | [English](README.en.md)
+
 # Patienten-Monitoring mit dem Raspberry Pi
 
 Ein kamerabasiertes Patienten-Monitoring auf einem **Raspberry Pi 5**. Es erfasst **Augen-, Mund- und
