@@ -1,102 +1,115 @@
-**Deutsch** | [English](README.en.md)
+**English** | [Deutsch](README.de.md)
 
-# 🧠 Patienten-Monitoring mit dem Raspberry Pi 📷
+# 🧠 Raspberry Pi Patient Monitoring 📷
 
-![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi%205-C51A4A?style=for-the-badge&logo=Raspberry%20Pi&logoColor=white)
-![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
-![MediaPipe](https://img.shields.io/badge/mediapipe-0097A7?style=for-the-badge&logo=google&logoColor=white)
-![OpenCV](https://img.shields.io/badge/opencv-%235C3EE8.svg?style=for-the-badge&logo=opencv&logoColor=white)
-![systemd](https://img.shields.io/badge/systemd-201A1E?style=for-the-badge&logo=linux&logoColor=white)
-
-Ein kamerabasiertes Patienten-Monitoring auf einem **Raspberry Pi 5**. Es erfasst **Augen-, Mund- und
-Körperbewegungen** mit MediaPipe und protokolliert nur anonyme Landmark-Koordinaten – niemals Kamerabilder. Ein
-**einzelner Taster** und eine **RGB-LED** steuern das ganze System, es läuft also ohne Tastatur und Bildschirm.
-
-Studienprojekt, Fakultät I – Elektro- und Informationstechnik, Hochschule Hannover, Wintersemester 2025/26.
+A privacy-friendly monitoring station built with **Python**, **MediaPipe** and **OpenCV** on a **Raspberry Pi 5**.
+It watches a patient through the Pi camera, detects closed eyes, tracks mouth and full-body movements, and logs only
+anonymous landmark coordinates – never images. A single push button and an RGB LED control the whole system, so it
+runs without keyboard or screen.
 
 ---
 
-## ✨ Funktionen
+## ✨ Features
 
-### 👁️ Überwachung
-* **Augen- & Mund-Monitor** – MediaPipe FaceMesh; erkennt geschlossene Augen über die **Eye Aspect Ratio**
-  (EAR < 0,21) und protokolliert die Landmarken von Mund und Augen
-* **Körperposen-Monitor** – MediaPipe Pose; protokolliert alle **33 Körper-Landmarken** mit ihrer Sichtbarkeit
-
-### 🔘 Bedienung mit einem Taster (Zustandsautomat)
-* **Einfachdruck** → Augen-/Mund-Monitor an/aus (LED 🟢 grün)
-* **Doppeldruck** → Posen-Monitor an/aus (LED 🔵 blau)
-* **Langdruck** (≥ 1,2 s) → Programm beenden (LED aus)
-* **LED-Selbsttest** beim Start und 🔴 rotes Blinken nach jedem Stopp oder Fehler
-
-### 🔒 Datenschutz & Betrieb
-* Gespeichert werden nur **normierte Landmark-Koordinaten** als JSON Lines (eine Zeile pro Bild, nach jedem
-  Schreiben geflusht)
-* **Autostart** mit systemd
+* **👁️ Eye & Mouth Monitor**: Tracks the face with **MediaPipe FaceMesh**, detects closed eyes via the
+  **Eye Aspect Ratio** (EAR < 0.21) and logs the mouth and eye landmarks.
+* **🧍 AI Pose Tracking**: Tracks all **33 body landmarks** with **MediaPipe Pose**, including their visibility.
+* **🔘 One-Button Control**: A state machine switches between the monitors with single, double and long presses.
+* **🚨 LED Status Feedback**: An RGB LED shows at a glance which monitor is running and when something went wrong.
+* **🔒 Privacy by Design**: Only normalized landmark coordinates are stored – no camera images.
+* **🛡️ Robust Camera Handling**: A camera check before every start, a clean shutdown of each monitor and a lock
+  file against double starts.
+* **🔄 Autostart**: Runs as a **systemd** service after boot.
 
 ---
 
-## 🏗️ Architektur
+## 🚦 LED Status Guide
 
-```
-          Taster (GPIO12)                 RGB-LED (GPIO23/24/25)
-                 │                                  ▲
-                 ▼                                  │
-          controller.py ── Zustandsautomat: IDLE / MOUTH_RUNNING / POSE_RUNNING
-                 │  startet und stoppt immer genau einen Monitor als Subprozess
-       ┌─────────┴──────────┐
-       ▼                    ▼
-mouth_eye_monitor_picamera2.py   patient_monitor2.py
-   FaceMesh + EAR                   Pose
-       │                            │
-       ▼                            ▼
-mouth_eye_<Zeit>.jsonl        pose_<Zeit>.jsonl
-```
+The system uses a 3-pin RGB LED (common cathode) to show the current state:
 
-![Zustandsdiagramm](docs/state-diagram.png)
+| Color | Pattern | Meaning |
+| --- | --- | --- |
+| 🔴🟢🔵 | Short sequence | **Self-test**: Red → green → blue at start-up. |
+| ⚫ **Off** | – | **Idle**: Waiting for a button press, or shut down. |
+| 🟢 **Green** | Solid | **Eye & mouth monitor**: FaceMesh is running. |
+| 🔵 **Blue** | Solid | **Pose monitor**: Body tracking is running. |
+| 🔴 **Red** | Blinking (~2 s) | **Feedback / error**: A monitor was stopped, or the camera was not available. |
 
-### 🛡️ Robustheit
-* **Kamera-Preflight** – vor dem Start eines Monitors öffnet und schließt der Controller die Kamera (bis zu
-  6 Versuche); eine blockierte libcamera-Pipeline führt so zu rotem Blinken statt zu einem hängenden Prozess
-* **Sauberes Beenden** – zuerst SIGINT, nach 3 s Timeout `kill()`, dann eine kurze Pause, damit die Kamera frei wird
-* **Taster-Auswertung** – Entprellung, Doppelklick-Fenster, Schonzeit nach Start/Stopp und automatische
-  Kalibrierung des Ruhepegels (funktioniert mit Pull-up- und Pull-down-Verdrahtung)
-* **Nur eine Instanz** – eine Lock-Datei verhindert zwei gleichzeitig laufende Controller
-* **Begrenzte Bildrate** – beide Monitore laufen mit 15 fps, das hält CPU-Last und Temperatur niedrig
+![State diagram](docs/state-diagram.png)
 
 ---
 
-## 🔌 Hardware
+## 🛠️ Hardware Setup
 
-| Bauteil | Anschluss |
-|---------|-----------|
-| Raspberry Pi 5 | – |
-| Raspberry Pi Kamera | CSI |
-| RGB-LED (gemeinsame Kathode, mit Vorwiderständen) | GPIO23 rot · GPIO24 grün · GPIO25 blau |
-| Taster | GPIO12 |
+* **Controller**: Raspberry Pi 5.
+* **Camera**: Raspberry Pi camera on the CSI port.
+* **Peripherals**:
+  * **Button**: Connected to **BCM 12** (auto-calibrated, works with pull-up or pull-down wiring).
+  * **RGB LED**: Pins **BCM 23** (R), **24** (G), **25** (B), each with a series resistor.
 
 ---
 
-## 🛠️ Starten
+## 🚀 Getting Started
 
-Auf Raspberry Pi OS:
+### 1. Install Dependencies
+
+Install the system libraries for the camera and GPIO, then the Python packages:
 
 ```bash
 sudo apt install python3-picamera2 python3-lgpio
 python3 -m venv --system-site-packages ~/pose-env && source ~/pose-env/bin/activate
 pip install -r requirements.txt
+```
+
+### 2. Execution
+
+```bash
 python3 controller.py
 ```
 
-**Autostart:** `deploy/run-paro.sh` nach `/usr/local/bin/` und `deploy/paro.service` nach `/etc/systemd/system/`
-kopieren, die Pfade darin anpassen und `sudo systemctl enable --now paro` ausführen.
+### 3. Autostart (optional)
 
-> ⚠️ **Bekannte Einschränkung:** Unter systemd funktionieren Controller, Taster und LED, die Kamera-Monitore liefen
-> aber nur zuverlässig aus einer Desktop-Sitzung. Wahrscheinliche Ursachen: die fehlende Anzeige- und
-> Sitzungsumgebung (`DISPLAY`, `XDG_RUNTIME_DIR`) und die Zugriffsrechte für libcamera.
+Copy `deploy/run-paro.sh` to `/usr/local/bin/` and `deploy/paro.service` to `/etc/systemd/system/`, adjust the
+paths inside, then enable the service:
+
+```bash
+sudo systemctl enable --now paro
+```
+
+> ⚠️ **Known limitation:** Under systemd the controller, button and LED work, but the camera monitors only ran
+> reliably when started from a desktop session – most likely because of the missing display and session
+> environment (`DISPLAY`, `XDG_RUNTIME_DIR`) and the access permissions for libcamera.
 
 ---
 
-## 🧰 Technologien
+## 🕹️ User Controls
 
-Python · MediaPipe · OpenCV · Picamera2 / libcamera · lgpio · systemd · Raspberry Pi 5
+The whole system runs on a **single button** (BCM 12):
+
+1. **Single press**: Start or stop the eye & mouth monitor (LED green).
+2. **Double press**: Start or stop the pose monitor (LED blue).
+3. **Long press** (≥ 1.2 s): Shut down the controller (LED off).
+
+Only one monitor runs at a time – starting one stops the other.
+
+---
+
+## 📁 Data Output Structure
+
+Each session writes timestamped files next to the scripts:
+
+* `mouth_eye_<timestamp>.jsonl`: One line per frame – `timestamp`, `eyes_closed`, `mouth_points`, `eye_points`.
+* `pose_<timestamp>.jsonl`: One line per frame – `timestamp` and all 33 `landmarks` (`x`, `y`, `z`, `visibility`).
+* `mouth_eye_log.txt`, `pose_monitor_log.txt`: Error logs of the two monitors.
+
+All coordinates are normalized to 0…1, so later analysis is independent of the camera resolution.
+
+---
+
+## 📂 Project Structure
+
+* `controller.py`: Button handling, state machine, LED control and starting/stopping the monitors.
+* `mouth_eye_monitor_picamera2.py`: Eye & mouth monitor with FaceMesh and the Eye Aspect Ratio.
+* `patient_monitor2.py`: Full-body pose monitor.
+* `deploy/`: systemd service and start script.
+* `docs/`: State diagram.
