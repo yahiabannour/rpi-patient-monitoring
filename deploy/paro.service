@@ -1,0 +1,14 @@
+[Unit]
+Description=PARO controller (button + LED + monitors)
+
+[Service]
+Type=simple
+
+ExecStart=/usr/local/bin/run-paro.sh
+
+WorkingDirectory=/home/yahia/Desktop/Projekt
+
+
+[Install]
+WantedBy=multi-user.target
+

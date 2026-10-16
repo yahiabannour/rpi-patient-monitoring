@@ -1,0 +1,13 @@
+# Recorded landmark data and error logs (may contain data about real people)
+*.jsonl
+*_log.txt
+
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Reports and presentations stay local
+*.pdf
+*.docx
+*.pptx

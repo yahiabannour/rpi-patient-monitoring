@@ -1,0 +1,6 @@
+# Picamera2 and lgpio come from Raspberry Pi OS:
+#   sudo apt install python3-picamera2 python3-lgpio
+# Create the venv with --system-site-packages so it can see them.
+mediapipe<1.0   # needs the legacy mp.solutions API (FaceMesh, Pose)
+opencv-python
+numpy
