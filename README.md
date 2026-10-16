@@ -1,66 +1,66 @@
-# Raspberry Pi patient monitoring
+# Patienten-Monitoring mit dem Raspberry Pi
 
-A camera-based patient monitor on a **Raspberry Pi 5**. It tracks **eye, mouth and body movements** with
-MediaPipe and logs only anonymous landmark coordinates, never camera images. A single push button and an RGB
-LED control the whole system, so it runs without a keyboard or screen.
+Ein kamerabasiertes Patienten-Monitoring auf einem **Raspberry Pi 5**. Es erfasst **Augen-, Mund- und
+Körperbewegungen** mit MediaPipe und protokolliert nur anonyme Landmark-Koordinaten, niemals Kamerabilder. Ein
+einzelner Taster und eine RGB-LED steuern das ganze System, es läuft also ohne Tastatur und Bildschirm.
 
-Student project, Faculty I (Electrical Engineering and Computer Science), Hochschule Hannover, winter semester 2025/26.
+Studienprojekt, Fakultät I – Elektro- und Informationstechnik, Hochschule Hannover, Wintersemester 2025/26.
 
-## Features
+## Funktionen
 
-- **Eye and mouth monitor** – MediaPipe FaceMesh. It detects closed eyes with the Eye Aspect Ratio
-  (EAR < 0.21) and logs the mouth and eye landmarks.
-- **Body pose monitor** – MediaPipe Pose. It logs all 33 body landmarks with their visibility.
-- **One-button control** with a state machine:
-  - single press → eye/mouth monitor on/off (LED green)
-  - double press → pose monitor on/off (LED blue)
-  - long press (≥ 1.2 s) → shut down (LED off)
-- **Visual feedback** – an LED self-test at start-up, and a red blink after each stop or error
-- **Privacy by design** – only normalized landmark coordinates are stored, as JSON Lines (one line per frame,
-  flushed after every write)
-- **Autostart** with systemd
+- **Augen- und Mund-Monitor** – MediaPipe FaceMesh. Er erkennt geschlossene Augen über die Eye Aspect Ratio
+  (EAR < 0,21) und protokolliert die Landmarken von Mund und Augen.
+- **Körperposen-Monitor** – MediaPipe Pose. Er protokolliert alle 33 Körper-Landmarken mit ihrer Sichtbarkeit.
+- **Bedienung mit einem Taster** über einen Zustandsautomaten:
+  - Einfachdruck → Augen-/Mund-Monitor an/aus (LED grün)
+  - Doppeldruck → Posen-Monitor an/aus (LED blau)
+  - Langdruck (≥ 1,2 s) → Programm beenden (LED aus)
+- **Visuelles Feedback** – LED-Selbsttest beim Start, rotes Blinken nach jedem Stopp oder Fehler
+- **Datenschutz durch Technik** – gespeichert werden nur normierte Landmark-Koordinaten als JSON Lines (eine Zeile
+  pro Bild, nach jedem Schreiben geflusht)
+- **Autostart** mit systemd
 
-## Architecture
+## Architektur
 
 ```
-            push button (GPIO12)            RGB LED (GPIO23/24/25)
-                    │                                  ▲
-                    ▼                                  │
-             controller.py ── state machine: IDLE / MOUTH_RUNNING / POSE_RUNNING
-                    │  starts and stops one monitor at a time as a subprocess
-          ┌─────────┴──────────┐
-          ▼                    ▼
+          Taster (GPIO12)                 RGB-LED (GPIO23/24/25)
+                 │                                  ▲
+                 ▼                                  │
+          controller.py ── Zustandsautomat: IDLE / MOUTH_RUNNING / POSE_RUNNING
+                 │  startet und stoppt immer genau einen Monitor als Subprozess
+       ┌─────────┴──────────┐
+       ▼                    ▼
 mouth_eye_monitor_picamera2.py   patient_monitor2.py
    FaceMesh + EAR                   Pose
-          │                         │
-          ▼                         ▼
- mouth_eye_<time>.jsonl      pose_<time>.jsonl
+       │                            │
+       ▼                            ▼
+mouth_eye_<Zeit>.jsonl        pose_<Zeit>.jsonl
 ```
 
-![State diagram](docs/state-diagram.png)
+![Zustandsdiagramm](docs/state-diagram.png)
 
-### Robustness details
+### Robustheit
 
-- **Camera preflight** – before it starts a monitor, the controller opens and releases the camera (up to
-  6 tries), so a blocked libcamera pipeline gives an error blink instead of a hung process.
-- **Clean shutdown** – SIGINT first, `kill()` after a 3 s timeout, then a short pause so the camera is released.
-- **Button handling** – debouncing, a double-press window, a grace period after start/stop, and automatic
-  calibration of the idle level, so the button works with either pull-up or pull-down wiring.
-- **Single instance** – a lock file prevents two controllers from running at once.
-- **Frame rate limit** – both monitors run at 15 fps to keep the CPU load and temperature of the Pi down.
+- **Kamera-Preflight** – vor dem Start eines Monitors öffnet und schließt der Controller die Kamera (bis zu
+  6 Versuche). Eine blockierte libcamera-Pipeline führt so zu rotem Blinken statt zu einem hängenden Prozess.
+- **Sauberes Beenden** – zuerst SIGINT, nach 3 s Timeout `kill()`, dann eine kurze Pause, damit die Kamera frei wird.
+- **Taster-Auswertung** – Entprellung, Doppelklick-Fenster, Schonzeit nach Start/Stopp und automatische
+  Kalibrierung des Ruhepegels, damit der Taster mit Pull-up- und Pull-down-Verdrahtung funktioniert.
+- **Nur eine Instanz** – eine Lock-Datei verhindert, dass zwei Controller gleichzeitig laufen.
+- **Begrenzte Bildrate** – beide Monitore laufen mit 15 fps, das hält CPU-Last und Temperatur des Pi niedrig.
 
 ## Hardware
 
-| Part | Connection |
-|------|------------|
+| Bauteil | Anschluss |
+|---------|-----------|
 | Raspberry Pi 5 | – |
-| Raspberry Pi Camera | CSI |
-| RGB LED (common cathode, with series resistors) | GPIO23 red · GPIO24 green · GPIO25 blue |
-| Push button | GPIO12 |
+| Raspberry Pi Kamera | CSI |
+| RGB-LED (gemeinsame Kathode, mit Vorwiderständen) | GPIO23 rot · GPIO24 grün · GPIO25 blau |
+| Taster | GPIO12 |
 
-## Running it
+## Starten
 
-On Raspberry Pi OS:
+Auf Raspberry Pi OS:
 
 ```bash
 sudo apt install python3-picamera2 python3-lgpio
@@ -69,13 +69,13 @@ pip install -r requirements.txt
 python3 controller.py
 ```
 
-For autostart, copy `deploy/run-paro.sh` to `/usr/local/bin/` and `deploy/paro.service` to
-`/etc/systemd/system/`, adjust the paths inside, then run `sudo systemctl enable --now paro`.
+Für den Autostart `deploy/run-paro.sh` nach `/usr/local/bin/` und `deploy/paro.service` nach
+`/etc/systemd/system/` kopieren, die Pfade darin anpassen und `sudo systemctl enable --now paro` ausführen.
 
-**Known limitation:** under systemd the controller, button and LED work, but the camera monitors only ran
-reliably when started from a desktop session. The likely causes are the missing display and session environment
-(`DISPLAY`, `XDG_RUNTIME_DIR`) and permissions for libcamera.
+**Bekannte Einschränkung:** Unter systemd funktionieren Controller, Taster und LED, die Kamera-Monitore liefen
+aber nur zuverlässig, wenn sie aus einer Desktop-Sitzung gestartet wurden. Wahrscheinliche Ursachen sind die
+fehlende Anzeige- und Sitzungsumgebung (`DISPLAY`, `XDG_RUNTIME_DIR`) und die Zugriffsrechte für libcamera.
 
-## Tech stack
+## Technologien
 
 Python · MediaPipe · OpenCV · Picamera2 / libcamera · lgpio · systemd · Raspberry Pi 5
