@@ -1,29 +1,42 @@
 [Deutsch](README.md) | **English**
 
-# Raspberry Pi patient monitoring
+# 🧠 Raspberry Pi Patient Monitoring 📷
+
+![Raspberry Pi](https://img.shields.io/badge/Raspberry%20Pi%205-C51A4A?style=for-the-badge&logo=Raspberry%20Pi&logoColor=white)
+![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+![MediaPipe](https://img.shields.io/badge/mediapipe-0097A7?style=for-the-badge&logo=google&logoColor=white)
+![OpenCV](https://img.shields.io/badge/opencv-%235C3EE8.svg?style=for-the-badge&logo=opencv&logoColor=white)
+![systemd](https://img.shields.io/badge/systemd-201A1E?style=for-the-badge&logo=linux&logoColor=white)
 
 A camera-based patient monitor on a **Raspberry Pi 5**. It tracks **eye, mouth and body movements** with MediaPipe
-and logs only anonymous landmark coordinates, never camera images. A single push button and an RGB LED control the
-whole system, so it runs without a keyboard or screen.
+and logs only anonymous landmark coordinates – never camera images. A **single push button** and an **RGB LED**
+control the whole system, so it runs without a keyboard or screen.
 
 Student project, Faculty I – Electrical Engineering and Computer Science, Hochschule Hannover, winter semester
 2025/26.
 
-## Features
+---
 
-- **Eye and mouth monitor** – MediaPipe FaceMesh. It detects closed eyes with the Eye Aspect Ratio (EAR < 0.21) and
-  logs the mouth and eye landmarks.
-- **Body pose monitor** – MediaPipe Pose. It logs all 33 body landmarks with their visibility.
-- **One-button control** via a state machine:
-  - single press → eye/mouth monitor on/off (LED green)
-  - double press → pose monitor on/off (LED blue)
-  - long press (≥ 1.2 s) → shut down (LED off)
-- **Visual feedback** – an LED self-test at start-up, and a red blink after every stop or error
-- **Privacy by design** – only normalized landmark coordinates are stored, as JSON Lines (one line per frame,
-  flushed after every write)
-- **Autostart** with systemd
+## ✨ Features
 
-## Architecture
+### 👁️ Monitoring
+* **Eye & mouth monitor** – MediaPipe FaceMesh; detects closed eyes with the **Eye Aspect Ratio** (EAR < 0.21)
+  and logs the mouth and eye landmarks
+* **Body pose monitor** – MediaPipe Pose; logs all **33 body landmarks** with their visibility
+
+### 🔘 One-button control (state machine)
+* **Single press** → eye/mouth monitor on/off (LED 🟢 green)
+* **Double press** → pose monitor on/off (LED 🔵 blue)
+* **Long press** (≥ 1.2 s) → shut down (LED off)
+* **LED self-test** at start-up and a 🔴 red blink after every stop or error
+
+### 🔒 Privacy & operation
+* Only **normalized landmark coordinates** are stored, as JSON Lines (one line per frame, flushed after every write)
+* **Autostart** with systemd
+
+---
+
+## 🏗️ Architecture
 
 ```
           push button (GPIO12)            RGB LED (GPIO23/24/25)
@@ -42,17 +55,18 @@ mouth_eye_<time>.jsonl        pose_<time>.jsonl
 
 ![State diagram](docs/state-diagram.png)
 
-### Robustness
+### 🛡️ Robustness
+* **Camera preflight** – before starting a monitor, the controller opens and releases the camera (up to 6 tries),
+  so a blocked libcamera pipeline gives a red blink instead of a hung process
+* **Clean shutdown** – SIGINT first, `kill()` after a 3 s timeout, then a short pause so the camera is released
+* **Button handling** – debouncing, double-press window, grace period after start/stop and automatic calibration
+  of the idle level (works with pull-up and pull-down wiring)
+* **Single instance** – a lock file prevents two controllers from running at once
+* **Frame rate limit** – both monitors run at 15 fps to keep CPU load and temperature down
 
-- **Camera preflight** – before it starts a monitor, the controller opens and releases the camera (up to 6 tries),
-  so a blocked libcamera pipeline gives a red blink instead of a hung process.
-- **Clean shutdown** – SIGINT first, `kill()` after a 3 s timeout, then a short pause so the camera is released.
-- **Button handling** – debouncing, a double-press window, a grace period after start/stop, and automatic
-  calibration of the idle level, so the button works with either pull-up or pull-down wiring.
-- **Single instance** – a lock file prevents two controllers from running at once.
-- **Frame rate limit** – both monitors run at 15 fps to keep the CPU load and temperature of the Pi down.
+---
 
-## Hardware
+## 🔌 Hardware
 
 | Part | Connection |
 |------|------------|
@@ -61,7 +75,9 @@ mouth_eye_<time>.jsonl        pose_<time>.jsonl
 | RGB LED (common cathode, with series resistors) | GPIO23 red · GPIO24 green · GPIO25 blue |
 | Push button | GPIO12 |
 
-## Running it
+---
+
+## 🛠️ Getting Started
 
 On Raspberry Pi OS:
 
@@ -72,13 +88,15 @@ pip install -r requirements.txt
 python3 controller.py
 ```
 
-For autostart, copy `deploy/run-paro.sh` to `/usr/local/bin/` and `deploy/paro.service` to
+**Autostart:** copy `deploy/run-paro.sh` to `/usr/local/bin/` and `deploy/paro.service` to
 `/etc/systemd/system/`, adjust the paths inside, then run `sudo systemctl enable --now paro`.
 
-**Known limitation:** under systemd the controller, button and LED work, but the camera monitors only ran
-reliably when started from a desktop session. The likely causes are the missing display and session environment
-(`DISPLAY`, `XDG_RUNTIME_DIR`) and the access permissions for libcamera.
+> ⚠️ **Known limitation:** under systemd the controller, button and LED work, but the camera monitors only ran
+> reliably when started from a desktop session. Likely causes: the missing display and session environment
+> (`DISPLAY`, `XDG_RUNTIME_DIR`) and the access permissions for libcamera.
 
-## Tech stack
+---
+
+## 🧰 Tech Stack
 
 Python · MediaPipe · OpenCV · Picamera2 / libcamera · lgpio · systemd · Raspberry Pi 5
