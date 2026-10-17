@@ -26,15 +26,19 @@ eine RGB-LED steuern das ganze System, es läuft also ohne Tastatur und Bildschi
 
 ## 🚦 LED-Statusanzeige
 
-Das System nutzt eine RGB-LED mit drei Pins (gemeinsame Kathode), um den aktuellen Zustand anzuzeigen:
+Das System nutzt eine RGB-LED mit drei Pins (gemeinsame Kathode), um den aktuellen Zustand anzuzeigen. Beim Start
+läuft ein kurzer Selbsttest (🔴 Rot → 🟢 Grün → 🔵 Blau).
 
-| Farbe | Muster | Bedeutung |
+| Aktion oder Situation | LED-Farbe / Verhalten | Bedeutung / Systemreaktion |
 | --- | --- | --- |
-| 🔴🟢🔵 | Kurze Abfolge | **Selbsttest**: Rot → Grün → Blau beim Start. |
-| ⚫ **Aus** | – | **Leerlauf**: Wartet auf einen Tastendruck, oder beendet. |
-| 🟢 **Grün** | Dauerhaft | **Augen- & Mund-Monitor**: FaceMesh läuft. |
-| 🔵 **Blau** | Dauerhaft | **Posen-Monitor**: Die Körpererkennung läuft. |
-| 🔴 **Rot** | Blinkend (~2 s) | **Rückmeldung / Fehler**: Ein Monitor wurde gestoppt, oder die Kamera war nicht verfügbar. |
+| **Einfachdruck** | 🟢 Grün (dauerhaft) | Mund- und Augenüberwachung läuft |
+| **Doppeldruck** | 🔵 Blau (dauerhaft) | Körper-/Pose-Erkennung läuft |
+| **Langdruck** (≥ 1,2 s) | ⚫ LED aus | Programm wird vollständig beendet |
+| **Nach Stop einer Funktion** | 🔴 Kurz rot blinkend (~2 s) | Prozess wurde gestoppt, System ist wieder im Leerlauf |
+| **Kamera belegt oder nicht bereit** | 🔴 Rot blinkend (~2 s) | Start des Programms fehlgeschlagen – Kamera ist belegt oder nicht verfügbar |
+| **Monitor-Programm stürzt ab** | 🔴 Rot blinkend (~2 s) | Programmfehler erkannt – System wechselt zurück in den Leerlauf |
+| **GPIO- oder Hardwarefehler** | 🔴 Rot blinkend | Fehler bei Hardware-Initialisierung (z. B. LED-Pin belegt) |
+| **Nach jeder Fehleranzeige** | ⚫ LED aus | System bereit für neuen Startbefehl |
 
 ![Zustandsdiagramm](docs/state-diagram.png)
 

@@ -25,15 +25,19 @@ runs without keyboard or screen.
 
 ## 🚦 LED Status Guide
 
-The system uses a 3-pin RGB LED (common cathode) to show the current state:
+The system uses a 3-pin RGB LED (common cathode) to show the current state. At start-up it runs a short self-test
+(🔴 red → 🟢 green → 🔵 blue).
 
-| Color | Pattern | Meaning |
+| Action or situation | LED color / behavior | Meaning / system reaction |
 | --- | --- | --- |
-| 🔴🟢🔵 | Short sequence | **Self-test**: Red → green → blue at start-up. |
-| ⚫ **Off** | – | **Idle**: Waiting for a button press, or shut down. |
-| 🟢 **Green** | Solid | **Eye & mouth monitor**: FaceMesh is running. |
-| 🔵 **Blue** | Solid | **Pose monitor**: Body tracking is running. |
-| 🔴 **Red** | Blinking (~2 s) | **Feedback / error**: A monitor was stopped, or the camera was not available. |
+| **Single press** | 🟢 Green (solid) | Mouth and eye monitoring is running |
+| **Double press** | 🔵 Blue (solid) | Body/pose detection is running |
+| **Long press** (≥ 1.2 s) | ⚫ LED off | The program shuts down completely |
+| **After stopping a function** | 🔴 Short red blinking (~2 s) | Process was stopped, the system is idle again |
+| **Camera busy or not ready** | 🔴 Red blinking (~2 s) | Start failed – the camera is busy or not available |
+| **Monitor program crashes** | 🔴 Red blinking (~2 s) | Program error detected – the system returns to idle |
+| **GPIO or hardware error** | 🔴 Red blinking | Error during hardware initialization (e.g. LED pin in use) |
+| **After every error indication** | ⚫ LED off | System ready for a new start command |
 
 ![State diagram](docs/state-diagram.png)
 
